@@ -7,20 +7,11 @@ class ApiServices {
 
   String get _baseurl {
     if (_currentBaseUrl == null) {
-      try {
-        final raw = dotenv.env['API_URL'];
-        if (raw == null || raw.isEmpty) {
-          print('API_URL not found in .env, using fallback URL');
-          _currentBaseUrl =
-              'http://10.0.2.2:8000/api'; // Fallback for Android emulator
-        } else {
-          _currentBaseUrl = raw;
-        }
-      } catch (e) {
-        print('Error getting API_URL from .env: $e, using fallback URL');
-        _currentBaseUrl =
-            'http://10.0.2.2:8000/api'; // Fallback for Android emulator
+      final raw = dotenv.env['API_URL'];
+      if (raw == null || raw.isEmpty) {
+        throw Exception('API_URL not found in .env file');
       }
+      _currentBaseUrl = raw;
     }
     return _currentBaseUrl!;
   }
@@ -104,7 +95,9 @@ class ApiServices {
       return data.cast<Map<String, dynamic>>();
     } else {
       final error = json.decode(response.body);
-      throw Exception('Failed to get notes: ${error['error'] ?? 'Unknown error'}');
+      throw Exception(
+        'Failed to get notes: ${error['error'] ?? 'Unknown error'}',
+      );
     }
   }
 
@@ -134,7 +127,9 @@ class ApiServices {
       return data;
     } else {
       final error = json.decode(response.body);
-      throw Exception('Failed to create note: ${error['error'] ?? 'Unknown error'}');
+      throw Exception(
+        'Failed to create note: ${error['error'] ?? 'Unknown error'}',
+      );
     }
   }
 
@@ -165,14 +160,13 @@ class ApiServices {
       return data;
     } else {
       final error = json.decode(response.body);
-      throw Exception('Failed to update note: ${error['error'] ?? 'Unknown error'}');
+      throw Exception(
+        'Failed to update note: ${error['error'] ?? 'Unknown error'}',
+      );
     }
   }
 
-  Future<void> deleteNote({
-    required int id,
-    required String token,
-  }) async {
+  Future<void> deleteNote({required int id, required String token}) async {
     final url = Uri.parse('${_baseurl}/notes/$id');
     print('Deleting note with URL: $url');
 
@@ -188,7 +182,9 @@ class ApiServices {
 
     if (response.statusCode != 204) {
       final error = json.decode(response.body);
-      throw Exception('Failed to delete note: ${error['error'] ?? 'Unknown error'}');
+      throw Exception(
+        'Failed to delete note: ${error['error'] ?? 'Unknown error'}',
+      );
     }
   }
 }
