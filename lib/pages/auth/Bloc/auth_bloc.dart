@@ -63,8 +63,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // For now, use email as username until user profile API is available
       // Extract email from login request to use as display name
-      final userId =
-          '1'; // Temporary - will be updated when profile API is available
       final userName = event.email.split(
         '@',
       )[0]; // Use part before @ as username
@@ -72,6 +70,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       print('Using email-based username: $userName');
       print('User email: $userEmail');
+
+      // Get user ID from notes API (temporary solution)
+      final userId = await _getUserIdFromNotes(response['token']);
 
       // Save user data to SharedPreferences
       await SharedPreferencesService.saveUserData(
@@ -146,4 +147,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   // Getter for the current token
   String? get currentToken => _currentToken;
+
+  // Helper method to get user ID from notes API
+  Future<String> _getUserIdFromNotes(String token) async {
+    try {
+      final notes = await _apiServices.getNotes(token);
+      if (notes.isNotEmpty) {
+        final userId = notes.first['user_id'].toString();
+        print('Found user ID from notes: $userId');
+        return userId;
+      }
+    } catch (e) {
+      print('Error getting user ID from notes: $e');
+    }
+
+    // Fallback to '1' if no notes found
+    print('No notes found, using default user ID: 1');
+    return '1';
+  }
 }

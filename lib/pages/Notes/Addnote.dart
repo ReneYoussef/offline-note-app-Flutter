@@ -21,6 +21,10 @@ class _AddNoteState extends State<AddNote> {
     if (title.isNotEmpty && content.isNotEmpty) {
       // Dispatch CreateNote event to BLoC
       context.read<NoteBloc>().add(CreateNote(title: title, body: content));
+
+      // Close dialog immediately for better UX
+      // The Firestore stream will update the UI with the new note
+      Navigator.of(context).pop();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

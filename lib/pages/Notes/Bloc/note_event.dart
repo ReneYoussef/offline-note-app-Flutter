@@ -22,21 +22,17 @@ class CreateNote extends NoteEvent {
 }
 
 class UpdateNote extends NoteEvent {
-  final int id;
+  final String id;
   final String title;
   final String body;
 
-  const UpdateNote({
-    required this.id,
-    required this.title,
-    required this.body,
-  });
+  const UpdateNote({required this.id, required this.title, required this.body});
   @override
   List<Object> get props => [id, title, body];
 }
 
 class DeleteNote extends NoteEvent {
-  final int id;
+  final String id;
 
   const DeleteNote({required this.id});
   @override
@@ -45,6 +41,12 @@ class DeleteNote extends NoteEvent {
 
 class RefreshNotes extends NoteEvent {
   const RefreshNotes();
+  @override
+  List<Object> get props => [];
+}
+
+class SyncNotes extends NoteEvent {
+  const SyncNotes();
   @override
   List<Object> get props => [];
 }

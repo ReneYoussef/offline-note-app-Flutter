@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "324929790101",
+    "project_id": "offline-note-app",
+    "storage_bucket": "offline-note-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324929790101:android:faccdc755f2fecc134fb9c",
+        "android_client_info": {
+          "package_name": "com.example.offline_note_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC39O-30Z_0x2tpb-7VhOLjM55iBYeNKuo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:offline_note_app/Database/app_database.dart';
 import 'package:offline_note_app/pages/Notes/Addnote.dart';
 import 'package:offline_note_app/services/shared_preferences_service.dart';
 import 'package:offline_note_app/pages/auth/login.dart';
@@ -12,6 +11,7 @@ import 'package:offline_note_app/pages/Notes/Bloc/note_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_state.dart';
 import 'package:offline_note_app/widgets/note_shimmer.dart';
+import 'package:offline_note_app/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
 class NotesPage extends StatefulWidget {
@@ -24,15 +24,25 @@ class NotesPage extends StatefulWidget {
 class _NotesPageState extends State<NotesPage> {
   List<Map<String, dynamic>> notes = [];
   String? userName;
-  // late AppDatabase db; // Commented out for future offline sync
+  bool isOnline = true;
 
   @override
   void initState() {
     super.initState();
-    // db = AppDatabase(); // Commented out for future offline sync
     // Load notes using BLoC
     context.read<NoteBloc>().add(const LoadNotes());
     _loadUserName();
+    _listenToConnectivity();
+  }
+
+  void _listenToConnectivity() {
+    FirestoreService.connectivityStream.listen((online) {
+      if (mounted) {
+        setState(() {
+          isOnline = online;
+        });
+      }
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -43,58 +53,6 @@ class _NotesPageState extends State<NotesPage> {
       });
     }
   }
-
-  // Future<void> addNote() async {
-  //   final currentUserId = AuthService.getCurrentUserId();
-  //   if (currentUserId != null) {
-  //     await db.addNote(
-  //       NotesCompanion.insert(
-  //         userId: currentUserId,
-  //         title: 'New Note',
-  //         content: 'This is a test note',
-  //       ),
-  //     );
-  //     context.read<NoteBloc>().add(const RefreshNotes());
-  //   }
-  // }
-
-  // Future<void> deleteNote(Map<String, dynamic> note) async {
-  //   await db.deleteNoteById(note['id']);
-  //   context.read<NoteBloc>().add(const RefreshNotes());
-  // }
-
-  // Future<void> debugDatabase() async {
-  //   await db.debugPrintAllNotes();
-  //   await db.debugPrintAllUsers();
-  // }
-
-  // Future<void> resetDatabase() async {
-  //   await AppDatabase.resetDatabase();
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('Database reset. Please restart the app.')),
-  //   );
-  // }
-
-  // Future<void> checkDatabaseHealth() async {
-  //   final hasPermissions = await AppDatabase.checkDatabasePermissions();
-  //   if (!hasPermissions) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text(
-  //           'Database permission issue detected. Try resetting the database.',
-  //         ),
-  //         backgroundColor: Colors.orange,
-  //       ),
-  //     );
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Database permissions are OK.'),
-  //         backgroundColor: Colors.green,
-  //       ),
-  //     );
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -149,13 +107,36 @@ class _NotesPageState extends State<NotesPage> {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Welcome, ${userName ?? 'User'}!',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Welcome, ${userName ?? 'User'}!',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isOnline ? Colors.green : Colors.orange,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isOnline ? 'Online' : 'Offline',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   const Text(
@@ -169,15 +150,15 @@ class _NotesPageState extends State<NotesPage> {
                   icon: const Icon(Icons.more_vert),
                   onSelected: (value) {
                     switch (value) {
-                      // case 'debug':
-                      //   debugDatabase();
-                      //   break;
-                      // case 'health':
-                      //   checkDatabaseHealth();
-                      //   break;
-                      // case 'reset':
-                      //   resetDatabase();
-                      //   break;
+                      case 'sync':
+                        context.read<NoteBloc>().add(const SyncNotes());
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Syncing notes...'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        break;
                       case 'logout':
                         context.read<AuthBloc>().add(
                           const AuthLogoutRequested(),
@@ -186,36 +167,16 @@ class _NotesPageState extends State<NotesPage> {
                     }
                   },
                   itemBuilder: (context) => [
-                    // const PopupMenuItem(
-                    //   value: 'debug',
-                    //   child: Row(
-                    //     children: [
-                    //       Icon(Icons.bug_report, size: 20),
-                    //       SizedBox(width: 8),
-                    //       Text('Debug Database'),
-                    //     ],
-                    //   ),
-                    // ),
-                    // const PopupMenuItem(
-                    //   value: 'health',
-                    //   child: Row(
-                    //     children: [
-                    //       Icon(Icons.health_and_safety, size: 20),
-                    //       SizedBox(width: 8),
-                    //       Text('Check Database Health'),
-                    //     ],
-                    //   ),
-                    // ),
-                    // const PopupMenuItem(
-                    //   value: 'reset',
-                    //   child: Row(
-                    //     children: [
-                    //       Icon(Icons.refresh, size: 20),
-                    //       SizedBox(width: 8),
-                    //       Text('Reset Database'),
-                    //     ],
-                    //   ),
-                    // ),
+                    const PopupMenuItem(
+                      value: 'sync',
+                      child: Row(
+                        children: [
+                          Icon(Icons.sync, size: 20),
+                          SizedBox(width: 8),
+                          Text('Sync Notes'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'logout',
                       child: Row(
@@ -324,21 +285,10 @@ class _NotesPageState extends State<NotesPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
-          // Create a Note object from the Map for ViewNotes
-          final noteObj = Note(
-            id: note['id'] ?? 0,
-            userId: note['user_id'] ?? 0,
-            title: note['title'] ?? 'Untitled',
-            content: note['body'] ?? note['content'] ?? '',
-            updatedAt: note['updated_at'] != null
-                ? DateTime.parse(note['updated_at'])
-                : DateTime.now(),
-            isSynced: note['is_synced'] ?? false,
-          );
-
+          // Navigate to ViewNotes with the note data
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ViewNotes(note: noteObj)),
+            MaterialPageRoute(builder: (context) => ViewNotes(note: note)),
           );
           context.read<NoteBloc>().add(const RefreshNotes());
         },
@@ -364,7 +314,7 @@ class _NotesPageState extends State<NotesPage> {
                     onSelected: (value) async {
                       if (value == 'delete') {
                         context.read<NoteBloc>().add(
-                          DeleteNote(id: note['id']),
+                          DeleteNote(id: note['id'].toString()),
                         );
                       }
                     },
@@ -403,10 +353,10 @@ class _NotesPageState extends State<NotesPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                note['created_at'] != null
+                note['createdAt'] != null
                     ? DateFormat(
                         'MMM dd, yyyy',
-                      ).format(DateTime.parse(note['created_at']))
+                      ).format(_parseDateTime(note['createdAt']))
                     : 'No date',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
@@ -415,5 +365,36 @@ class _NotesPageState extends State<NotesPage> {
         ),
       ),
     );
+  }
+
+  DateTime _parseDateTime(dynamic dateValue) {
+    try {
+      if (dateValue == null) return DateTime.now();
+
+      if (dateValue is DateTime) {
+        return dateValue;
+      }
+
+      if (dateValue is String) {
+        return DateTime.parse(dateValue);
+      }
+
+      // Handle Firestore Timestamp
+      if (dateValue.toString().contains('Timestamp')) {
+        // Extract seconds from Timestamp(seconds=1761552384, nanoseconds=0)
+        final match = RegExp(
+          r'Timestamp\(seconds=(\d+),',
+        ).firstMatch(dateValue.toString());
+        if (match != null) {
+          final seconds = int.parse(match.group(1)!);
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+        }
+      }
+
+      return DateTime.now();
+    } catch (e) {
+      print('Error parsing date: $e');
+      return DateTime.now();
+    }
   }
 }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:offline_note_app/Database/app_database.dart';
+
 import 'package:offline_note_app/pages/Notes/Bloc/note_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_state.dart';
 import 'package:intl/intl.dart';
 
 class ViewNotes extends StatefulWidget {
-  final Note note;
+  final Map<String, dynamic> note;
   const ViewNotes({super.key, required this.note});
 
   @override
@@ -19,15 +19,17 @@ class _ViewNotesState extends State<ViewNotes> {
   bool _isEditing = false;
   TextEditingController? _titleController;
   TextEditingController? _contentController;
-  Note? _currentNote;
+  Map<String, dynamic>? _currentNote;
 
   @override
   void initState() {
     super.initState();
     _currentNote = widget.note;
-    _titleController = TextEditingController(text: _currentNote?.title ?? '');
+    _titleController = TextEditingController(
+      text: _currentNote?['title'] ?? '',
+    );
     _contentController = TextEditingController(
-      text: _currentNote?.content ?? '',
+      text: _currentNote?['content'] ?? '',
     );
   }
 
@@ -73,7 +75,7 @@ class _ViewNotesState extends State<ViewNotes> {
     // Dispatch UpdateNote event to BLoC
     context.read<NoteBloc>().add(
       UpdateNote(
-        id: _currentNote!.id,
+        id: _currentNote!['id'].toString(),
         title: _titleController!.text.trim(),
         body: _contentController!.text.trim(),
       ),
@@ -134,11 +136,11 @@ class _ViewNotesState extends State<ViewNotes> {
           // Update the current note with the new data
           setState(() {
             _isEditing = false;
-            _currentNote = _currentNote?.copyWith(
-              title: _titleController?.text.trim() ?? _currentNote!.title,
-              content: _contentController?.text.trim() ?? _currentNote!.content,
-              updatedAt: DateTime.now(),
-            );
+            _currentNote?['title'] =
+                _titleController?.text.trim() ?? _currentNote!['title'];
+            _currentNote?['content'] =
+                _contentController?.text.trim() ?? _currentNote!['content'];
+            _currentNote?['updatedAt'] = DateTime.now();
           });
         } else if (state is NoteOperationFailure) {
           // Show error message
@@ -174,8 +176,9 @@ class _ViewNotesState extends State<ViewNotes> {
                     onPressed: () {
                       setState(() {
                         _isEditing = false;
-                        _titleController?.text = _currentNote?.title ?? '';
-                        _contentController?.text = _currentNote?.content ?? '';
+                        _titleController?.text = _currentNote?['title'] ?? '';
+                        _contentController?.text =
+                            _currentNote?['content'] ?? '';
                       });
                     },
                     icon: const Icon(Icons.close),
@@ -213,7 +216,9 @@ class _ViewNotesState extends State<ViewNotes> {
                         case 'delete':
                           // Use BLoC for delete instead of local DB
                           context.read<NoteBloc>().add(
-                            DeleteNote(id: _currentNote?.id ?? 0),
+                            DeleteNote(
+                              id: _currentNote?['id'].toString() ?? '',
+                            ),
                           );
                           Navigator.pop(context); // Close the view after delete
                           break;
@@ -314,9 +319,14 @@ class _ViewNotesState extends State<ViewNotes> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    DateFormat(
-                      'EEEE, MMMM dd, yyyy',
-                    ).format(_currentNote?.updatedAt ?? DateTime.now()),
+                    DateFormat('EEEE, MMMM dd, yyyy').format(
+                      _currentNote?['updatedAt'] is DateTime
+                          ? _currentNote!['updatedAt']
+                          : DateTime.parse(
+                              _currentNote?['updatedAt'].toString() ??
+                                  DateTime.now().toIso8601String(),
+                            ),
+                    ),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blue[700],
@@ -325,9 +335,14 @@ class _ViewNotesState extends State<ViewNotes> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateFormat(
-                      'h:mm a',
-                    ).format(_currentNote?.updatedAt ?? DateTime.now()),
+                    DateFormat('h:mm a').format(
+                      _currentNote?['updatedAt'] is DateTime
+                          ? _currentNote!['updatedAt']
+                          : DateTime.parse(
+                              _currentNote?['updatedAt'].toString() ??
+                                  DateTime.now().toIso8601String(),
+                            ),
+                    ),
                     style: TextStyle(fontSize: 12, color: Colors.blue[600]),
                   ),
                 ],
@@ -355,7 +370,7 @@ class _ViewNotesState extends State<ViewNotes> {
                     ),
                   )
                 : Text(
-                    _currentNote?.title ?? '',
+                    _currentNote?['title'] ?? '',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -391,7 +406,7 @@ class _ViewNotesState extends State<ViewNotes> {
                       border: Border.all(color: Colors.grey[200]!),
                     ),
                     child: Text(
-                      _currentNote?.content ?? '',
+                      _currentNote?['content'] ?? '',
                       style: const TextStyle(
                         fontSize: 16,
                         height: 1.6,

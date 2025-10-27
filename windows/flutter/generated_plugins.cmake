@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  sqlite3_flutter_libs
+  cloud_firestore
+  connectivity_plus
+  firebase_core
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
