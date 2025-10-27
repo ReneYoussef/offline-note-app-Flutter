@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:offline_note_app/Database/app_database.dart';
 import 'package:offline_note_app/pages/Notes/Addnote.dart';
-import 'package:offline_note_app/services/auth_service.dart';
+import 'package:offline_note_app/services/shared_preferences_service.dart';
 import 'package:offline_note_app/pages/auth/login.dart';
+import 'package:offline_note_app/pages/auth/Bloc/auth_bloc.dart';
+import 'package:offline_note_app/pages/auth/Bloc/auth_event.dart';
+import 'package:offline_note_app/pages/auth/Bloc/auth_state.dart';
 import 'package:offline_note_app/pages/Notes/ViewNotes.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
@@ -19,6 +22,7 @@ class NotesPage extends StatefulWidget {
 
 class _NotesPageState extends State<NotesPage> {
   List<Map<String, dynamic>> notes = [];
+  String? userName;
   // late AppDatabase db; // Commented out for future offline sync
 
   @override
@@ -27,6 +31,16 @@ class _NotesPageState extends State<NotesPage> {
     // db = AppDatabase(); // Commented out for future offline sync
     // Load notes using BLoC
     context.read<NoteBloc>().add(const LoadNotes());
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await SharedPreferencesService.getUserName();
+    if (mounted) {
+      setState(() {
+        userName = name;
+      });
+    }
   }
 
   // Future<void> addNote() async {
@@ -83,28 +97,45 @@ class _NotesPageState extends State<NotesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<NoteBloc, NoteState>(
-      listener: (context, state) {
-        if (state is NoteLoaded) {
-          setState(() {
-            notes = state.notes;
-          });
-        } else if (state is NoteOperationSuccess) {
-          setState(() {
-            notes = state.notes;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else if (state is NoteOperationFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<NoteBloc, NoteState>(
+          listener: (context, state) {
+            if (state is NoteLoaded) {
+              setState(() {
+                notes = state.notes;
+              });
+            } else if (state is NoteOperationSuccess) {
+              setState(() {
+                notes = state.notes;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else if (state is NoteOperationFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+        BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthUnauthenticated) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+              );
+            }
+          },
+        ),
+      ],
       child: BlocBuilder<NoteBloc, NoteState>(
         builder: (context, state) {
           return Scaffold(
@@ -114,9 +145,23 @@ class _NotesPageState extends State<NotesPage> {
               elevation: 0,
               backgroundColor: Colors.white,
               foregroundColor: Colors.black87,
-              title: const Text(
-                'My Notes',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 24),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome, ${userName ?? 'User'}!',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'My Notes',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 24),
+                  ),
+                ],
               ),
               actions: [
                 PopupMenuButton<String>(
@@ -133,12 +178,8 @@ class _NotesPageState extends State<NotesPage> {
                       //   resetDatabase();
                       //   break;
                       case 'logout':
-                        AuthService.logout();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Login(),
-                          ),
+                        context.read<AuthBloc>().add(
+                          const AuthLogoutRequested(),
                         );
                         break;
                     }

@@ -7,11 +7,18 @@ class ApiServices {
 
   String get _baseurl {
     if (_currentBaseUrl == null) {
-      final raw = dotenv.env['API_URL'];
-      if (raw == null || raw.isEmpty) {
-        throw Exception('API_URL not found in .env file');
+      try {
+        final raw = dotenv.env['API_URL'];
+        if (raw == null || raw.isEmpty) {
+          throw Exception('API_URL not found in .env file');
+        } else {
+          _currentBaseUrl = raw;
+          print('Using API URL from .env: $_currentBaseUrl');
+        }
+      } catch (e) {
+        print('Error getting API_URL from .env: $e');
+        throw Exception('Failed to load API_URL from .env file: $e');
       }
-      _currentBaseUrl = raw;
     }
     return _currentBaseUrl!;
   }
@@ -50,27 +57,35 @@ class ApiServices {
     required String email,
     required String password,
   }) async {
-    final url = Uri.parse('${_baseurl}/login');
-    print('Logging in user with URL: $url');
-    print(
-      'Request body: ${json.encode({'email': email, 'password': password})}',
-    );
+    try {
+      final url = Uri.parse('${_baseurl}/login');
+      print('Logging in user with URL: $url');
+      print(
+        'Request body: ${json.encode({'email': email, 'password': password})}',
+      );
 
-    final response = await http.post(
-      url,
-      body: json.encode({'email': email, 'password': password}),
-      headers: {'Content-Type': 'application/json'},
-    );
+      final response = await http.post(
+        url,
+        body: json.encode({'email': email, 'password': password}),
+        headers: {'Content-Type': 'application/json'},
+      );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data;
-    } else {
-      final error = json.decode(response.body);
-      throw Exception('Failed to login: ${error['message']}');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        final error = json.decode(response.body);
+        print(
+          'Login failed with status ${response.statusCode}: ${response.body}',
+        );
+        throw Exception('Failed to login: ${error['message']}');
+      }
+    } catch (e) {
+      print('Login error: $e');
+      throw Exception('Login error: $e');
     }
   }
 

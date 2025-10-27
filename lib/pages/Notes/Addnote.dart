@@ -57,7 +57,10 @@ class _AddNoteState extends State<AddNote> {
             ),
             elevation: 8,
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+              constraints: BoxConstraints(
+                maxWidth: 500,
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -107,58 +110,64 @@ class _AddNoteState extends State<AddNote> {
                     ),
                   ),
                   // Content
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Note Title',
-                            hintText: 'Enter a title for your note',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Note Title',
+                              hintText: 'Enter a title for your note',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.blue[400]!,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue[400]!),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[50],
+                            onChanged: (value) {
+                              setState(() {
+                                title = value;
+                              });
+                            },
                           ),
-                          onChanged: (value) {
-                            setState(() {
-                              title = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Note Content',
-                            hintText: 'Write your note here...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 15),
+                          TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Note Content',
+                              hintText: 'Write your note here...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.blue[400]!,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue[400]!),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[50],
+                            maxLines: 6,
+                            onChanged: (value) {
+                              setState(() {
+                                content = value;
+                              });
+                            },
                           ),
-                          maxLines: 6,
-                          onChanged: (value) {
-                            setState(() {
-                              content = value;
-                            });
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   // Actions
                   Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
                     child: Row(
                       children: [
                         Expanded(

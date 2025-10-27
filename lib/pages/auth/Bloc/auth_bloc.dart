@@ -56,26 +56,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       print('Login response received: $response');
+      print('Response keys: ${response.keys.toList()}');
 
       // Store the token
       _currentToken = response['token'];
 
+      // For now, use email as username until user profile API is available
+      // Extract email from login request to use as display name
+      final userId =
+          '1'; // Temporary - will be updated when profile API is available
+      final userName = event.email.split(
+        '@',
+      )[0]; // Use part before @ as username
+      final userEmail = event.email;
+
+      print('Using email-based username: $userName');
+      print('User email: $userEmail');
+
       // Save user data to SharedPreferences
       await SharedPreferencesService.saveUserData(
         token: response['token'],
-        userId: '1', // Temporary - you should get this from API
-        name: 'User', // Temporary - you should get this from API
-        email: event.email,
+        userId: userId,
+        name: userName,
+        email: userEmail,
       );
 
       // Handle successful login
-      // Note: Your API returns token but not user details in login response
-      // You might need to fetch user details separately or modify your API
       emit(
         AuthAuthenticated(
-          userId: '1', // Temporary - you should get this from API
-          name: 'User', // Temporary - you should get this from API
-          email: event.email, // Use the email from the request
+          userId: userId,
+          name: userName,
+          email: userEmail,
           token: response['token'],
         ),
       );

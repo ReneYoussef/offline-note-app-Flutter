@@ -14,9 +14,11 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
     print('Environment variables loaded successfully');
+    print('API_URL: ${dotenv.env['API_URL']}');
   } catch (e) {
     print('Error loading .env file: $e');
-    // Continue without .env file - you can set default values
+    print('Please ensure .env file exists and contains API_URL');
+    // The app will fail if .env is not loaded properly
   }
   runApp(const MyApp());
 }
