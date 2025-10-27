@@ -11,6 +11,7 @@ import 'package:offline_note_app/pages/Notes/ViewNotes.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_state.dart';
+import 'package:offline_note_app/widgets/note_shimmer.dart';
 import 'package:intl/intl.dart';
 
 class NotesPage extends StatefulWidget {
@@ -229,7 +230,7 @@ class _NotesPageState extends State<NotesPage> {
                 ),
               ],
             ),
-            body: notes.isEmpty ? _buildEmptyState() : _buildNoteListView(),
+            body: _buildBody(state),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () async {
                 await showDialog(
@@ -280,6 +281,21 @@ class _NotesPageState extends State<NotesPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildBody(NoteState state) {
+    // Show shimmer loading when notes are being loaded
+    if (state is NoteLoading) {
+      return const NoteShimmer();
+    }
+
+    // Show empty state if no notes
+    if (notes.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // Show notes list
+    return _buildNoteListView();
   }
 
   Widget _buildNoteListView() {
