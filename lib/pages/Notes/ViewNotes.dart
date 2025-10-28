@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_bloc.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_state.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class ViewNotes extends StatefulWidget {
@@ -29,7 +30,7 @@ class _ViewNotesState extends State<ViewNotes> {
       text: _currentNote?['title'] ?? '',
     );
     _contentController = TextEditingController(
-      text: _currentNote?['content'] ?? '',
+      text: _currentNote?['content'] ?? _currentNote?['body'] ?? '',
     );
   }
 
@@ -163,12 +164,18 @@ class _ViewNotesState extends State<ViewNotes> {
                 icon: const Icon(Icons.arrow_back_ios),
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text(
-                _isEditing ? 'Edit Note' : 'View Note',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20,
-                ),
+              title: Row(
+                children: [
+                  Text(
+                    _isEditing ? 'Edit Note' : 'View Note',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildSyncStatus(),
+                ],
               ),
               actions: [
                 if (_isEditing) ...[
@@ -319,14 +326,9 @@ class _ViewNotesState extends State<ViewNotes> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    DateFormat('EEEE, MMMM dd, yyyy').format(
-                      _currentNote?['updatedAt'] is DateTime
-                          ? _currentNote!['updatedAt']
-                          : DateTime.parse(
-                              _currentNote?['updatedAt'].toString() ??
-                                  DateTime.now().toIso8601String(),
-                            ),
-                    ),
+                    DateFormat(
+                      'EEEE, MMMM dd, yyyy',
+                    ).format(_parseDateTime(_currentNote?['updatedAt'])),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.blue[700],
@@ -335,14 +337,9 @@ class _ViewNotesState extends State<ViewNotes> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateFormat('h:mm a').format(
-                      _currentNote?['updatedAt'] is DateTime
-                          ? _currentNote!['updatedAt']
-                          : DateTime.parse(
-                              _currentNote?['updatedAt'].toString() ??
-                                  DateTime.now().toIso8601String(),
-                            ),
-                    ),
+                    DateFormat(
+                      'h:mm a',
+                    ).format(_parseDateTime(_currentNote?['updatedAt'])),
                     style: TextStyle(fontSize: 12, color: Colors.blue[600]),
                   ),
                 ],
@@ -437,5 +434,107 @@ class _ViewNotesState extends State<ViewNotes> {
         child,
       ],
     );
+  }
+
+  Widget _buildSyncStatus() {
+    final isLocal = _currentNote?['isLocal'] == true;
+    final hasApiId = _currentNote?['apiId'] != null;
+
+    if (isLocal) {
+      // Note is local only (not synced to Firestore yet)
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.orange[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off, size: 12, color: Colors.orange[700]),
+            const SizedBox(width: 4),
+            Text(
+              'Local',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.orange[700],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (hasApiId) {
+      // Note is synced to both Firestore and API
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.green[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_done, size: 12, color: Colors.green[700]),
+            const SizedBox(width: 4),
+            Text(
+              'Synced',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.green[700],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Note is in Firestore but not synced to API yet
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.blue[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_upload, size: 12, color: Colors.blue[700]),
+            const SizedBox(width: 4),
+            Text(
+              'Pending',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.blue[700],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  DateTime _parseDateTime(dynamic dateValue) {
+    try {
+      if (dateValue == null) return DateTime.now();
+
+      if (dateValue is DateTime) {
+        return dateValue;
+      }
+
+      if (dateValue is Timestamp) {
+        return dateValue.toDate();
+      }
+
+      if (dateValue is String) {
+        return DateTime.parse(dateValue);
+      }
+
+      return DateTime.now();
+    } catch (e) {
+      print('Error parsing date: $e');
+      return DateTime.now();
+    }
   }
 }

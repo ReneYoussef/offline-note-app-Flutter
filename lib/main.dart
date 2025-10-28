@@ -12,8 +12,6 @@ import 'pages/auth/Bloc/auth_event.dart';
 import 'pages/Notes/Bloc/note_bloc.dart';
 import 'pages/Notes/NotesPage.dart';
 import 'services/firestore_service.dart';
-import 'services/sync_service.dart';
-import 'services/shared_preferences_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,17 +83,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // Check authentication status on app start
       context.read<AuthBloc>().add(const AuthCheckRequested());
 
-      // Listen for connectivity changes for background sync
-      _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-        List<ConnectivityResult> results,
-      ) {
-        final isOnline = results.any(
-          (result) => result != ConnectivityResult.none,
-        );
-        if (isOnline) {
-          _triggerBackgroundSync();
-        }
-      });
+      // No automatic sync functionality - manual sync only
     } catch (e) {
       print('Error in AuthWrapper initState: $e');
       print('Stack trace: ${StackTrace.current}');
@@ -106,26 +94,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void dispose() {
     _connectivitySubscription?.cancel();
     super.dispose();
-  }
-
-  // Trigger background sync when coming online
-  Future<void> _triggerBackgroundSync() async {
-    try {
-      final userId = await SharedPreferencesService.getUserId();
-      final token = await SharedPreferencesService.getToken();
-
-      if (userId != null && token != null) {
-        print('Device came online, triggering background sync...');
-        // Run sync in background without blocking UI
-        Future.microtask(() async {
-          await SyncService.syncFromApiToFirestore(userId, token);
-          await SyncService.syncFromFirestoreToApi(userId, token);
-          print('Background sync completed');
-        });
-      }
-    } catch (e) {
-      print('Error in background sync: $e');
-    }
   }
 
   @override

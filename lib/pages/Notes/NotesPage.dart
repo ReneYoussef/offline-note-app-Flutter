@@ -12,6 +12,7 @@ import 'package:offline_note_app/pages/Notes/Bloc/note_event.dart';
 import 'package:offline_note_app/pages/Notes/Bloc/note_state.dart';
 import 'package:offline_note_app/widgets/note_shimmer.dart';
 import 'package:offline_note_app/services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class NotesPage extends StatefulWidget {
@@ -29,8 +30,16 @@ class _NotesPageState extends State<NotesPage> {
   @override
   void initState() {
     super.initState();
-    // Load notes using BLoC
-    context.read<NoteBloc>().add(const LoadNotes());
+    print('NotesPage initState called');
+    // Load notes using BLoC only if not already loaded
+    final currentState = context.read<NoteBloc>().state;
+    print('Current BLoC state: ${currentState.runtimeType}');
+    if (currentState is NoteInitial) {
+      print('Triggering LoadNotes because state is NoteInitial');
+      context.read<NoteBloc>().add(const LoadNotes());
+    } else {
+      print('Skipping LoadNotes because state is not NoteInitial');
+    }
     _loadUserName();
     _listenToConnectivity();
   }
@@ -97,6 +106,12 @@ class _NotesPageState extends State<NotesPage> {
       ],
       child: BlocBuilder<NoteBloc, NoteState>(
         builder: (context, state) {
+          print('NotesPage received state: ${state.runtimeType}');
+          if (state is NoteLoaded) {
+            print('NotesPage has ${state.notes.length} notes');
+          } else if (state is NoteLoading) {
+            print('NotesPage is in loading state');
+          }
           return Scaffold(
             backgroundColor: Colors.grey[50],
             appBar: AppBar(
@@ -154,7 +169,7 @@ class _NotesPageState extends State<NotesPage> {
                         context.read<NoteBloc>().add(const SyncNotes());
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Syncing notes...'),
+                            content: Text('Syncing notes to cloud...'),
                             duration: Duration(seconds: 2),
                           ),
                         );
@@ -173,7 +188,7 @@ class _NotesPageState extends State<NotesPage> {
                         children: [
                           Icon(Icons.sync, size: 20),
                           SizedBox(width: 8),
-                          Text('Sync Notes'),
+                          Text('Sync to Cloud'),
                         ],
                       ),
                     ),
@@ -250,7 +265,15 @@ class _NotesPageState extends State<NotesPage> {
       return const NoteShimmer();
     }
 
-    // Show empty state if no notes
+    // Show notes based on state
+    if (state is NoteLoaded) {
+      if (state.notes.isEmpty) {
+        return _buildEmptyState();
+      }
+      return _buildNoteListView(state.notes);
+    }
+
+    // Show empty state if no notes or other states
     if (notes.isEmpty) {
       return _buildEmptyState();
     }
@@ -259,7 +282,8 @@ class _NotesPageState extends State<NotesPage> {
     return _buildNoteListView();
   }
 
-  Widget _buildNoteListView() {
+  Widget _buildNoteListView([List<Map<String, dynamic>>? notesList]) {
+    final notesToShow = notesList ?? notes;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -269,9 +293,9 @@ class _NotesPageState extends State<NotesPage> {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        itemCount: notes.length,
+        itemCount: notesToShow.length,
         itemBuilder: (context, index) {
-          final note = notes[index];
+          final note = notesToShow[index];
           return _buildNoteCard(note, context);
         },
       ),
@@ -352,19 +376,83 @@ class _NotesPageState extends State<NotesPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                note['createdAt'] != null
-                    ? DateFormat(
-                        'MMM dd, yyyy',
-                      ).format(_parseDateTime(note['createdAt']))
-                    : 'No date',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    note['createdAt'] != null
+                        ? DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(_parseDateTime(note['createdAt']))
+                        : 'No date',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                  _buildSyncStatus(note),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildSyncStatus(Map<String, dynamic> note) {
+    final isLocal = note['isLocal'] == true;
+    final hasApiId = note['apiId'] != null;
+
+    if (isLocal) {
+      // Note is local only (not synced to Firestore yet)
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off, size: 14, color: Colors.orange[600]),
+          const SizedBox(width: 4),
+          Text(
+            'Local',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.orange[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    } else if (hasApiId) {
+      // Note is synced to both Firestore and API
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_done, size: 14, color: Colors.green[600]),
+          const SizedBox(width: 4),
+          Text(
+            'Synced',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.green[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Note is in Firestore but not synced to API yet
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_upload, size: 14, color: Colors.blue[600]),
+          const SizedBox(width: 4),
+          Text(
+            'Pending',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.blue[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   DateTime _parseDateTime(dynamic dateValue) {
@@ -375,20 +463,12 @@ class _NotesPageState extends State<NotesPage> {
         return dateValue;
       }
 
-      if (dateValue is String) {
-        return DateTime.parse(dateValue);
+      if (dateValue is Timestamp) {
+        return dateValue.toDate();
       }
 
-      // Handle Firestore Timestamp
-      if (dateValue.toString().contains('Timestamp')) {
-        // Extract seconds from Timestamp(seconds=1761552384, nanoseconds=0)
-        final match = RegExp(
-          r'Timestamp\(seconds=(\d+),',
-        ).firstMatch(dateValue.toString());
-        if (match != null) {
-          final seconds = int.parse(match.group(1)!);
-          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
-        }
+      if (dateValue is String) {
+        return DateTime.parse(dateValue);
       }
 
       return DateTime.now();
